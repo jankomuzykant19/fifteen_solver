@@ -2,130 +2,144 @@ import time
 
 solved = [['1', '2', '3', '4'], ['5', '6', '7', '8'], ['9', '10', '11', '12'], ['13', '14', '15', '0']]
 
-EMPTY_FIELD = {}
+empty_field = {}
 
 
+# Klasa węzeł
 class node:
     def __init__(self, current_board, parent, last_move, way, order):
-        self.board = current_board
+        self.board = current_board  # Do zmiennej tablca przypisujemy obecny wygląd tablicy
         self.children = {}
-        self.errors = {}
-        if parent != 'Root':
+        self.heu_que = {}
+        if parent != 'Root':  # Jeżeli rodzic  nie jest "korzeniem"
             self.parent = parent
-        self.last = last_move
-        self.way = way.copy()
-        self.way.append(last_move)
-        self.to_visit = order.copy()
+        self.last = last_move  # Ostatni ruch
+        self.way = way.copy()  # do ścieżki ruchu przypisujemy jej kopię
+        self.way.append(last_move)  # i do tej kopii dodajemy ostatni wykonany ruch
+        self.to_visit = order.copy()  # to_visit to są miejsca do odwiedzenia, przypisujemy do nich kopię tego orderu który podajemy w wywołaniu
 
+    # Tworzenie dziecka danego węzła
     def create_child(self, board_after_move, move, order):
         child = node(board_after_move, self, move, self.way, order)
         self.children[move] = child
 
+
     def make_move(self, move, order):
-        y = EMPTY_FIELD['row']
-        x = EMPTY_FIELD['column']
-        array = []
+        y = empty_field['row']
+        x = empty_field['column']
         if move == 'L':
+            array = []
             for row in self.board:
                 array.append(row.copy())
             array[y][x - 1], array[y][x] = array[y][x], array[y][x - 1]
-            EMPTY_FIELD['column'] -= 1
+            empty_field['column'] -= 1
             self.create_child(array, move, order)
         elif move == 'R':
+            array = []
             for row in self.board:
                 array.append(row.copy())
             array[y][x], array[y][x + 1] = array[y][x + 1], array[y][x]
-            EMPTY_FIELD['column'] += 1
+            empty_field['column'] += 1
             self.create_child(array, move, order)
         elif move == 'U':
+            array = []
             for row in self.board:
                 array.append(row.copy())
             array[y - 1][x], array[y][x] = array[y][x], array[y - 1][x]
-            EMPTY_FIELD['row'] -= 1
+            empty_field['row'] -= 1
             self.create_child(array, move, order)
         elif move == 'D':
+            array = []
             for row in self.board:
                 array.append(row.copy())
             array[y][x], array[y + 1][x] = array[y + 1][x], array[y][x]
-            EMPTY_FIELD['row'] += 1
+            empty_field['row'] += 1
             self.create_child(array, move, order)
 
 
-def change_position_of_blank_field(last_move):
+# Zmiana pozycji pustego miejsca, w zależności od ruchu operujemy na odpowiednich współrzędnych pustego pola
+def change_0_pos(last_move):
     if last_move == 'U':
-        EMPTY_FIELD['row'] += 1
+        empty_field['row'] += 1
     if last_move == 'D':
-        EMPTY_FIELD['row'] -= 1
+        empty_field['row'] -= 1
     if last_move == 'L':
-        EMPTY_FIELD['column'] += 1
+        empty_field['column'] += 1
     if last_move == 'R':
-        EMPTY_FIELD['column'] -= 1
+        empty_field['column'] -= 1
 
 
-def remove_ways_to_out_of_board(current_node, flag=False):
-    is_removed_l = False
-    is_removed_r = False
-    is_removed_u = False
-    is_removed_d = False
-    if EMPTY_FIELD['column'] == len(solved[0]) - 1 and EMPTY_FIELD['row'] == len(solved) - 1:
+# Usuwamy ścieżki w które nie da się iść sprawdzając w którą stronę nie możemy przesunąć pustego miejsca
+def remove_possible_ways(current_node, flag=False):
+    is_l = False
+    is_r = False
+    is_u = False
+    is_d = False
+    # jest len(solved[0]) bo kolumny są jakby w jednmy okienku i dlatego sprawdzamy długość tego pierwszego wiersza
+    # a len(solved) jest po to, że jest to liczba wierszy po prostu
+    if empty_field['column'] == len(solved[0]) - 1 and empty_field['row'] == len(solved) - 1:
         current_node.to_visit.remove('R')
         current_node.to_visit.remove('D')
-        is_removed_r = True
-        is_removed_d = True
-    elif EMPTY_FIELD['column'] == len(solved[0]) - 1 and EMPTY_FIELD['row'] == 0:
+        is_r = True
+        is_d = True
+    elif empty_field['column'] == len(solved[0]) - 1 and empty_field['row'] == 0:
         current_node.to_visit.remove('R')
         current_node.to_visit.remove('U')
-        is_removed_r = True
-        is_removed_u = True
-    elif EMPTY_FIELD['column'] == 0 and EMPTY_FIELD['row'] == 0:
+        is_r = True
+        is_u = True
+    elif empty_field['column'] == 0 and empty_field['row'] == 0:
         current_node.to_visit.remove('L')
         current_node.to_visit.remove('U')
-        is_removed_l = True
-        is_removed_u = True
-    elif EMPTY_FIELD['column'] == 0 and EMPTY_FIELD['row'] == len(solved) - 1:
+        is_l = True
+        is_u = True
+    elif empty_field['column'] == 0 and empty_field['row'] == len(solved) - 1:
         current_node.to_visit.remove('L')
         current_node.to_visit.remove('D')
-        is_removed_l = True
-        is_removed_d = True
-    elif EMPTY_FIELD['column'] == 0:
+        is_l = True
+        is_d = True
+    elif empty_field['column'] == 0:
         current_node.to_visit.remove('L')
-        is_removed_l = True
-    elif EMPTY_FIELD['column'] == len(solved[0]) - 1:
+        is_l = True
+    elif empty_field['column'] == len(solved[0]) - 1:
         current_node.to_visit.remove('R')
-        is_removed_r = True
-    elif EMPTY_FIELD['row'] == 0:
+        is_r = True
+    elif empty_field['row'] == 0:
         current_node.to_visit.remove('U')
-        is_removed_u = True
-    elif EMPTY_FIELD['row'] == len(solved) - 1:
+        is_u = True
+    elif empty_field['row'] == len(solved) - 1:
         current_node.to_visit.remove('D')
-        is_removed_d = True
+        is_d = True
     if not flag:
-        if current_node.last == 'R' and not is_removed_l:
+        if current_node.last == 'R' and not is_l:
             current_node.to_visit.remove('L')
-        elif current_node.last == 'L' and not is_removed_r:
+        elif current_node.last == 'L' and not is_r:
             current_node.to_visit.remove('R')
-        elif current_node.last == 'U' and not is_removed_d:
+        elif current_node.last == 'U' and not is_d:
             current_node.to_visit.remove('D')
-        elif current_node.last == 'D' and not is_removed_u:
+        elif current_node.last == 'D' and not is_u:
             current_node.to_visit.remove('U')
 
 
+# Funkcja sprawdzająca czy już rozwiązaliśmy
 def is_solved(test_board, solved):
     if test_board == solved:
         return True
 
 
-def find_and_set_empty_field(test_board):
+# Funkcja szukająca pustego pola
+def find_empty_field(test_board):
     for j in range(len(test_board)):
         for i in range(len(test_board[j])):
             if test_board[j][i] == '0':
-                EMPTY_FIELD['row'] = j
-                EMPTY_FIELD['column'] = i
+                empty_field['row'] = j
+                empty_field['column'] = i
+    return empty_field
 
 
+# Funkcja przygotowująca rozwiązanie
 def prepare_solution(data, solution_file, statistic_file, s_time):
     way, processed_nodes, visited_nodes, depth_level = data
-    if way != -1:
+    if way != -1:  # Jeżeli znajdzie rozwiązanie
         way.remove(way[0])
         solution_length = len(way)
         solution = way
@@ -136,16 +150,12 @@ def prepare_solution(data, solution_file, statistic_file, s_time):
     file.write(str(solution_length))
     if way != -1:
         file.write('\n')
-        file.write(str(solution))
+        file.write(str(solution).replace(" ", "").replace("'", "").replace("[", "").replace("]", "").replace(",", ""))
     file.close()
     file = open(statistic_file, 'w+')
-    file.write(str(solution_length))
-    file.write('\n')
-    file.write(str(visited_nodes))
-    file.write('\n')
-    file.write(str(processed_nodes))
-    file.write('\n')
-    file.write(str(depth_level))
-    file.write('\n')
+    file.write(str(solution_length) + '\n')
+    file.write(str(visited_nodes) + '\n')
+    file.write(str(processed_nodes) + '\n')
+    file.write(str(depth_level) + '\n')
     file.write(str(round((time.time() - s_time) * 1000, 3)))
     file.close()
